@@ -1,32 +1,74 @@
 <template>
-  <div
-    class="carousel-container"
-    ref="contenedor"
-    @mousedown="empezarArrastre"
-    @mouseup="terminarArrastre"
-    @mouseleave="terminarArrastre"
-    @mousemove="arrastrar"
-  >
-    <div class="galeria" ref="galeria">
-      <!-- Solo renderizamos las obras que tienen imagen -->
-      <div
-        v-for="(obra, index) in obras.filter((obra) => obra.image_id)"
-        :key="obra.id"
-        class="obra"
-        :class="{ 'obra-activa': index === obraActiva }"
-        ref="obraElements"
+  <div class="carousel-wrapper">
+    <!-- Botones de navegación en la parte superior -->
+    <div class="navigation-arrows">
+      <button
+        @click="navegarA(obraActiva - 1)"
+        class="arrow-btn prev-btn"
+        :disabled="obraActiva === 0"
       >
-        <div class="imagen-container">
-          <img :src="getImageUrl(obra.image_id)" alt="Obra de arte" />
-          <div v-if="cargando && index === obraActiva" class="loading-overlay">
-            <div class="spinner"></div>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+        </svg>
+      </button>
+      <button
+        @click="navegarA(obraActiva + 1)"
+        class="arrow-btn next-btn"
+        :disabled="obraActiva >= obrasConImagen.length - 1"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+        </svg>
+      </button>
+    </div>
+
+    <div
+      class="carousel-container"
+      ref="contenedor"
+      @mousedown="empezarArrastre"
+      @mouseup="terminarArrastre"
+      @mouseleave="terminarArrastre"
+      @mousemove="arrastrar"
+    >
+      <div class="galeria" ref="galeria">
+        <!-- renderiza las obras que tienen imagen -->
+        <div
+          v-for="(obra, index) in obrasConImagen"
+          :key="obra.id"
+          class="obra"
+          :class="{ 'obra-activa': index === obraActiva }"
+          ref="obraElements"
+        >
+          <div class="imagen-container">
+            <img :src="getImageUrl(obra.image_id)" alt="Obra de arte" />
+            <div v-if="cargando && index === obraActiva" class="loading-overlay">
+              <div class="spinner"></div>
+            </div>
+            <button
+              @click.stop="toggleLike(obra)"
+              class="like-button"
+              :class="{ liked: likesStore.isLiked(obra.id) }"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                <path
+                  fill="currentColor"
+                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                />
+              </svg>
+            </button>
+          </div>
+          <!-- Información debajo de la imagen -->
+          <div class="informacion">
+            <p class="autor">{{ obra.artist_title || 'Autor desconocido' }}</p>
+            <p class="año">{{ obra.date_display || 'Fecha desconocida' }}</p>
           </div>
         </div>
-        <!-- Información debajo de la imagen -->
-        <div class="informacion">
-          <p class="autor">{{ obra.artist_title || 'Autor desconocido' }}</p>
-          <p class="anio">{{ obra.date_display || 'Fecha desconocida' }}</p>
-        </div>
+      </div>
+
+      <!-- Mensaje simple de error de timeout -->
+      <div v-if="timeoutError" class="timeout-error">
+        <p>Tiempo de espera excedido</p>
+        <button @click="reintentar" class="retry-button">Reintentar</button>
       </div>
     </div>
   </div>
@@ -34,11 +76,13 @@
 
 <script>
 import axios from 'axios'
+import { useObraLikesStore } from '../stores/obraLikes.js'
 
 export default {
   data() {
     return {
       obras: [],
+      obrasConImagen: [],
       pagina: 1,
       cargando: false,
       arrastrando: false,
@@ -50,40 +94,75 @@ export default {
       scrolling: false,
       snapTimeout: null,
       finCargado: false,
+      timeoutError: false,
+      timeoutId: null,
     }
+  },
+  computed: {
+    likesStore() {
+      return useObraLikesStore()
+    },
   },
   mounted() {
     this.obtenerObras()
     this.agregarScrollListener()
     window.addEventListener('resize', this.calcularDimensiones)
+    window.addEventListener('keydown', this.manejarTeclas)
   },
   beforeUnmount() {
     window.removeEventListener('resize', this.calcularDimensiones)
+    window.removeEventListener('keydown', this.manejarTeclas)
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId)
+    }
   },
   methods: {
     async obtenerObras() {
       if (this.cargando || this.finCargado) return
       this.cargando = true
+      this.timeoutError = false
+
+      // Configurar timeout
+      this.timeoutId = setTimeout(() => {
+        this.timeoutError = true
+        this.cargando = false
+      }, 10000) // 10 segundos de timeout
 
       try {
         const response = await axios.get(
           `https://api.artic.edu/api/v1/artworks?page=${this.pagina}&limit=10`,
         )
-        const nuevasObras = response.data.data.filter((obra) => obra.image_id)
+
+        // Limpiar el timeout si la petición fue exitosa
+        clearTimeout(this.timeoutId)
+
+        const nuevasObras = response.data.data
 
         if (nuevasObras.length === 0) {
           this.finCargado = true
         } else {
+          // Filtrar las nuevas obras que tienen imagen
+          const nuevasObrasConImagen = nuevasObras.filter((obra) => obra.image_id)
+
+          // Agregar solo las obras con imagen
+          this.obrasConImagen = [...this.obrasConImagen, ...nuevasObrasConImagen]
           this.obras = [...this.obras, ...nuevasObras]
           this.pagina++
+
+          // Verificar si hay suficientes obras con imagen
+          if (this.obrasConImagen.length < 10 && !this.finCargado) {
+            this.obtenerObras()
+          }
         }
 
-        // Esperar al siguiente ciclo para asegurar que los elementos DOM estén actualizados
         this.$nextTick(() => {
           this.calcularDimensiones()
         })
       } catch (error) {
+        clearTimeout(this.timeoutId)
         console.error('Error al obtener obras', error)
+        this.timeoutError = true
+
         if (error.response && error.response.status === 404) {
           this.finCargado = true
         }
@@ -91,17 +170,21 @@ export default {
         this.cargando = false
       }
     },
+    reintentar() {
+      this.timeoutError = false
+      this.obtenerObras()
+    },
     getImageUrl(imageId) {
       return imageId ? `https://www.artic.edu/iiif/2/${imageId}/full/843,/0/default.jpg` : ''
     },
     agregarScrollListener() {
       const contenedor = this.$refs.contenedor
       contenedor.addEventListener('scroll', () => {
-        // Verificar si estamos cerca del final y cargar más elementos si es necesario
+        // Verificar si estamos cerca del final y cargar más elementos
         const isNearEnd =
           contenedor.scrollLeft + contenedor.clientWidth >= contenedor.scrollWidth - 200
 
-        if (isNearEnd && !this.cargando && !this.finCargado) {
+        if (isNearEnd && !this.cargando && !this.finCargado && !this.timeoutError) {
           this.obtenerObras()
         }
 
@@ -196,11 +279,66 @@ export default {
       const desplazamiento = (x - this.inicioX) * 2
       this.$refs.contenedor.scrollLeft = this.scrollIzq - desplazamiento
     },
+    toggleLike(obra) {
+      this.likesStore.toggleLike(obra)
+    },
+    // Método para navegar a la obra con el índice dado
+    navegarA(index) {
+      if (index < 0 || index >= this.obrasConImagen.length) return
+      this.obraActiva = index
+      this.centrarElemento(index)
+
+      // Si estamos cerca del final, cargar más obras
+      if (index >= this.obrasConImagen.length - 3 && !this.cargando && !this.finCargado) {
+        this.obtenerObras()
+      }
+    },
+    // Manejo de navegación con teclado (flechas izquierda/derecha)
+    manejarTeclas(event) {
+      if (event.key === 'ArrowLeft') {
+        this.navegarA(this.obraActiva - 1)
+      } else if (event.key === 'ArrowRight') {
+        this.navegarA(this.obraActiva + 1)
+      }
+    },
   },
 }
 </script>
 
 <style scoped>
+/* Contenedor principal que envuelve todo el carrusel */
+.carousel-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Estilos para las flechas de navegación en la parte superior */
+.navigation-arrows {
+  display: flex;
+  justify-content: start;
+  align-items: center;
+  gap: 20px;
+}
+
+.arrow-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #1f1f1f;
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.arrow-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .carousel-container {
   width: 100%;
   overflow-x: auto;
@@ -254,11 +392,11 @@ export default {
 }
 
 .obra-activa .informacion {
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.877);
 }
 
 .autor,
-.anio {
+.año {
   margin: 0;
   font-size: 14px;
 }
@@ -318,5 +456,69 @@ img {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Estilos del mensaje de error de timeout */
+.timeout-error {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ff0019ea;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  z-index: 1000;
+  text-align: center;
+  box-shadow: 0 1px 20cqb rgba(0, 0, 0, 0.349);
+}
+
+.timeout-error p {
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.retry-button {
+  margin: 5px 0px;
+  margin-left: 10px;
+  padding: 7px 12px;
+  font-weight: bold;
+  background-color: white;
+  color: #dc3545;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+/* Estilos para el botón de like */
+.like-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.7);
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 15;
+  transition: all 0.2s ease;
+  color: #888;
+}
+
+.like-button:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.like-button.liked {
+  color: #ff3b5c;
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.obra-activa .like-button {
+  opacity: 1;
 }
 </style>
