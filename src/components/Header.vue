@@ -1,12 +1,13 @@
 <template>
   <header>
-    <img
-      src="../assets/imgs/Art_Institute_of_Chicago_Logo.png"
-      alt="Art_Institute_of_Chicago_Logo"
-    />
+    <a href="/"
+      ><img
+        src="../assets/imgs/Art_Institute_of_Chicago_Logo.png"
+        alt="Art_Institute_of_Chicago_Logo"
+    /></a>
     <nav>
-      <RouterLink to="/">Home</RouterLink>
-      <RouterLink to="/favourite">Favoritas</RouterLink>
+      <RouterLink class="enlace" to="/">Home</RouterLink>
+      <RouterLink class="enlace" to="/favourite">Favoritas</RouterLink>
       <!-- <RouterLink to="/about">About</RouterLink> -->
     </nav>
   </header>
@@ -18,21 +19,35 @@
 header {
   display: flex;
   justify-content: center;
+  align-items: end;
   padding: 10px 20px;
-  align-items: center;
   background-color: rgba(255, 255, 255, 0.144);
 }
 
 header img {
-  width: 90px;
+  width: 70px;
+}
+
+img a {
+  border-bottom: none;
+}
+
+header img:hover {
+  filter: invert(9%) sepia(96%) saturate(4780%) hue-rotate(337deg) brightness(91%) contrast(103%);
 }
 
 nav {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  justify-content: end;
   width: 100%;
   align-items: center;
   font-size: 2rem;
+  gap: 20px;
+}
+
+.enlace {
+  margin-bottom: 10px;
+  padding-bottom: 0;
+  border-bottom: 1px solid #a1002b;
 }
 </style>
