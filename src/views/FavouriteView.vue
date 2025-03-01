@@ -27,11 +27,10 @@ export default {
 
 h1 {
   font-size: 3rem;
-  font-weight: 600;
   letter-spacing: 1px;
 
   color: #fff;
-  font-family: 'Times New Roman', Times, Georgia, serif;
+  font-family: 'Quicksand', sans-serif;
   padding: 0px 10px;
 }
 

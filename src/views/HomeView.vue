@@ -29,11 +29,10 @@ import Galery from '@/components/Galery.vue'
 
 h1 {
   font-size: 2.8rem;
-  font-weight: 600;
   letter-spacing: 1px;
 
   color: #fff;
-  font-family: 'Times New Roman', Times, Georgia, serif;
+  font-family: 'Quicksand', sans-serif;
   padding: 0px 10px;
 }
 

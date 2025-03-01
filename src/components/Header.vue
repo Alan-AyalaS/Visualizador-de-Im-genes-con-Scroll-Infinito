@@ -41,7 +41,7 @@ nav {
   justify-content: end;
   width: 100%;
   align-items: center;
-  font-size: 2rem;
+  font-size: 1.7rem;
   gap: 20px;
 }
 
