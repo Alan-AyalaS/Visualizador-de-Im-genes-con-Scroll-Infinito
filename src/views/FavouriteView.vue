@@ -383,7 +383,7 @@ main {
   border: none;
   width: 36px;
   height: 36px;
-  border-radius: 25px;
+  border-radius: 50px;
   font-size: 24px;
   cursor: pointer;
   z-index: 20;
