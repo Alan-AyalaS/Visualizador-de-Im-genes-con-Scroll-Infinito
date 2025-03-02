@@ -26,7 +26,24 @@ header {
 }
 
 header img {
+  margin-top: 10px;
   width: 70px;
+}
+
+@media(min-width:768px){
+  header img {
+    margin-left: 20px;
+  }
+
+}
+
+@media (min-width: 1440px){
+  header img {
+    margin-left: 150px;
+  }
+  header nav {
+    margin-right: 150px;
+  }
 }
 
 img a {
