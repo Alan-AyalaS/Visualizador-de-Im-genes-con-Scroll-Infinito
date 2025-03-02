@@ -31,18 +31,14 @@ header img {
 }
 
 @media(min-width:768px){
-  header img {
-    margin-left: 20px;
+  header {
+  padding: 10px 100px;
   }
-
 }
 
 @media (min-width: 1440px){
-  header img {
-    margin-left: 150px;
-  }
-  header nav {
-    margin-right: 150px;
+  header {
+  padding: 10px 150px;
   }
 }
 
