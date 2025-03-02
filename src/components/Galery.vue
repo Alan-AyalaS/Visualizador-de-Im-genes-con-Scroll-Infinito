@@ -39,16 +39,19 @@
           ref="obraElements"
         >
           <div class="imagen-container">
-            <img 
+            <img
               v-if="debeCargarImagen(index)"
-              :src="getImageUrl(obra.image_id)" 
+              :src="getImageUrl(obra.image_id)"
               :data-src="getImageUrl(obra.image_id)"
-              alt="Obra de arte" 
+              alt="Obra de arte"
               loading="lazy"
               @load="imagenCargada(index)"
             />
             <div v-else class="imagen-placeholder"></div>
-            <div v-if="imagenesEnCarga[index] || (cargando && index === obraActiva)" class="loading-overlay">
+            <div
+              v-if="imagenesEnCarga[index] || (cargando && index === obraActiva)"
+              class="loading-overlay"
+            >
               <div class="spinner"></div>
             </div>
             <button
@@ -100,9 +103,9 @@ export default {
       finCargado: false,
       timeoutError: false,
       timeoutId: null,
-      imagenesEnCarga: {},  // Objeto para rastrear las imágenes que están cargando
+      imagenesEnCarga: {}, // Objeto para rastrear las imágenes que están cargando
       imagenesCargadas: {}, // Objeto para rastrear las imágenes ya cargadas
-      margenDeCarga: 2      // Número de imágenes a cargar antes y después de la actual
+      margenDeCarga: 2, // Número de imágenes a cargar antes y después de la actual
     }
   },
   computed: {
@@ -196,7 +199,7 @@ export default {
           this.scrolling = false
           this.snapAlCentro()
         }, 150)
-        
+
         // Verificar qué imágenes deberían cargarse ahora
         this.verificarImagenesParaCargar()
       })
@@ -207,27 +210,31 @@ export default {
       if (this.imagenesCargadas[index]) {
         return true
       }
-      
+
       // Cargar imágenes dentro del rango de margen de la imagen activa
-      return index >= this.obraActiva - this.margenDeCarga && 
-             index <= this.obraActiva + this.margenDeCarga
+      return (
+        index >= this.obraActiva - this.margenDeCarga &&
+        index <= this.obraActiva + this.margenDeCarga
+      )
     },
     // Método para verificar qué imágenes deben cargarse
     verificarImagenesParaCargar() {
-      // Para cada obra en el rango del margen de carga
-      for (let i = this.obraActiva - this.margenDeCarga; i <= this.obraActiva + this.margenDeCarga; i++) {
+      for (
+        let i = this.obraActiva - this.margenDeCarga;
+        i <= this.obraActiva + this.margenDeCarga;
+        i++
+      ) {
         if (i >= 0 && i < this.obrasConImagen.length) {
-          // Si aún no se ha iniciado la carga, marcarla como en carga
           if (!this.imagenesCargadas[i] && !this.imagenesEnCarga[i]) {
-            this.$set(this.imagenesEnCarga, i, true)
+            this.imagenesEnCarga[i] = true // En Vue 3 ya no necesitas this.$set()
           }
         }
       }
     },
     // Método para marcar una imagen como cargada
     imagenCargada(index) {
-      this.$set(this.imagenesEnCarga, index, false)
-      this.$set(this.imagenesCargadas, index, true)
+      this.imagenesEnCarga[index] = false
+      this.imagenesCargadas[index] = true
     },
     calcularDimensiones() {
       if (!this.$refs.obraElements || !this.$refs.obraElements.length) return
