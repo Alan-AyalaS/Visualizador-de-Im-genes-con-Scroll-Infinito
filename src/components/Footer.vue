@@ -12,6 +12,7 @@
 </template>
 <style>
 .site-footer {
+  width: 100%;
   padding: 20px 0;
   margin-top: auto;
   height: 70px;
