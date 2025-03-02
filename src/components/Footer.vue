@@ -14,7 +14,7 @@
 .site-footer {
   padding: 20px 0;
   margin-top: auto;
-  height: 60px;
+  height: 70px;
 
   background-color: #000000e0;
   color: white;
@@ -24,6 +24,7 @@
   max-width: 1200px;
   height: 100%;
   margin: 0 auto;
+
   display: flex;
   justify-content: space-between;
   align-items: center;
