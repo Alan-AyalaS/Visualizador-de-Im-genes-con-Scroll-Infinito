@@ -370,16 +370,20 @@ main {
   box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
 }
 
+.modal-content::-webkit-scrollbar {
+  display: none;
+}
+
 .cerrar-modal {
   position: absolute;
   top: 15px;
-  right: 15px;
-  background: rgba(0, 0, 0, 0.5);
+  right: 17px;
+  background: rgba(0, 0, 0, 0.637);
   color: white;
   border: none;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 25px;
   font-size: 24px;
   cursor: pointer;
   z-index: 20;
@@ -393,6 +397,8 @@ main {
 }
 
 .modal-imagen {
+  margin-top: 30px;
+  margin-bottom: 30px;
   width: 100%;
   text-align: center;
   padding: 15px 15px 0 15px;
@@ -409,7 +415,7 @@ main {
 }
 
 .modal-info {
-  padding: 20px 30px 30px 30px;
+  padding: 60px 30px 30px 30px;
 }
 
 .modal-info h2 {
