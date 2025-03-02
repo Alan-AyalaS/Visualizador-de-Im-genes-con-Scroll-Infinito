@@ -76,12 +76,6 @@ netlify deploy
  ┣ 📜 README.md
 ```
 
-### Estru
-
-```sh
-npm run build
-```
-
 ### 📄 Licencia
 
 Este proyecto está bajo la licencia MIT.
