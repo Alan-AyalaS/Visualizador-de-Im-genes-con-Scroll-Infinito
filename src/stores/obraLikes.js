@@ -12,11 +12,11 @@ export const useObraLikesStore = defineStore('obraLikes', {
       if (!obra || !obra.id) return
 
       if (this.isLiked(obra.id)) {
-        // Eliminar el like
+        // Elimina el like
         const { [obra.id]: removed, ...rest } = this.likedObras
         this.likedObras = rest
       } else {
-        // Agregar el like guardando toda la información de la obra
+        // Agrega el like guardando toda la información de la obra
         this.likedObras = {
           ...this.likedObras,
           [obra.id]: obra,
@@ -51,7 +51,7 @@ export const useObraLikesStore = defineStore('obraLikes', {
         }
       } catch (error) {
         console.error('Error al cargar likes del localStorage:', error)
-        // En caso de error, mantener el estado vacío
+        // En caso de error, mantiene el estado vacío
         this.likedObras = {}
       }
     },
@@ -72,5 +72,3 @@ export function initializeObraLikes() {
   store.cargarDeLocalStorage()
   return store
 }
-
-// No inicializamos automáticamente aquí, lo haremos desde main.js

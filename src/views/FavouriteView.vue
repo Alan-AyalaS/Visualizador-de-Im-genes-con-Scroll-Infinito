@@ -101,18 +101,17 @@ export default {
       obraSeleccionada: {},
     }
   },
-  // Usamos el hook created para asegurarnos de tener acceso al store
+  // Inicializa el store en created para asegurar que esté disponible antes del montaje
   created() {
-    // Asegurarnos de que el store esté inicializado
     this.likesStore = useObraLikesStore()
   },
   mounted() {
     this.cargarObrasLikeadas()
-    // Añadir listener para cerrar el modal con la tecla ESC
+    // listener para la tecla ESC para mejorar la UX del modal
     document.addEventListener('keydown', this.manejarTeclas)
   },
   beforeUnmount() {
-    // Eliminar listener cuando el componente se desmonte
+    // Limpieza del listener para prevenir fugas de memoria
     document.removeEventListener('keydown', this.manejarTeclas)
   },
   methods: {
@@ -125,7 +124,6 @@ export default {
           this.likesStore = useObraLikesStore()
         }
 
-        // Obtener los IDs de obras likeadas del store
         const idsLikeados = this.likesStore.getLikedIds()
 
         if (idsLikeados.length === 0) {
@@ -134,21 +132,21 @@ export default {
           return
         }
 
-        // Para cada ID, obtener los detalles completos de la obra
+        // Mapea cada ID a una promesa para cargar la info de la obra
         const obrasPromesas = idsLikeados.map(async (id) => {
-          // Si ya tenemos la obra completa en el store, usarla
+          // Optimización: si ya tiene los datos completos, evitam llamada a la API
           const obraGuardada = this.likesStore.getLikedObra(id)
           if (obraGuardada && Object.keys(obraGuardada).length > 1) {
             return obraGuardada
           }
 
-          // Si solo tenemos el ID, hacer una petición a la API
+          // Si solo tenemos el ID, carga desde la API
           try {
             const response = await axios.get(`https://api.artic.edu/api/v1/artworks/${id}`)
             return response.data.data
           } catch (error) {
             console.error(`Error al cargar la obra ${id}:`, error)
-            // Devolver un objeto mínimo si falla la petición
+            // Objeto fallback para evitar errores en la UI
             return { id: id, title: 'Error al cargar', image_id: null }
           }
         })
@@ -161,27 +159,29 @@ export default {
         this.cargando = false
       }
     },
+    // Construye la URL completa para la imagen según la API
     getImageUrl(imageId) {
       return imageId ? `https://www.artic.edu/iiif/2/${imageId}/full/843,/0/default.jpg` : ''
     },
     toggleLike(obra) {
       if (this.likesStore) {
         this.likesStore.toggleLike(obra)
-        // Actualizar la lista después de quitar un like
+        // Actualiza la lista filtrando las obras que ya no están likeadas
         this.obrasLikeadas = this.obrasLikeadas.filter((o) => this.likesStore.isLiked(o.id))
       }
     },
     abrirModal(obra) {
       this.obraSeleccionada = obra
       this.modalAbierto = true
-      // Prevenir scroll en el fondo cuando el modal está abierto
+      // Bloquea scroll del fondo para mejorar UX
       document.body.style.overflow = 'hidden'
     },
     cerrarModal() {
       this.modalAbierto = false
-      // Restaurar scroll
+      // Restaura el scroll
       document.body.style.overflow = 'auto'
     },
+    // Manejador para cerrar el modal con la tecla ESC
     manejarTeclas(e) {
       if (e.key === 'Escape' && this.modalAbierto) {
         this.cerrarModal()
@@ -203,7 +203,7 @@ export default {
 }
 
 h1 {
-  font-size: 3rem;
+  font-size: 1.8rem;
   letter-spacing: 1px;
   color: #fff;
   font-family: 'Quicksand', sans-serif;
@@ -448,7 +448,7 @@ main {
   color: #333;
 }
 
-/* Estilos responsivos */
+/* Media queries para responsividad */
 @media (min-width: 768px) {
   .modal-content {
     flex-direction: row;

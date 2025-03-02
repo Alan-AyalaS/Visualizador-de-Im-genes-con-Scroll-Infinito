@@ -1,6 +1,5 @@
 <template>
   <div class="carousel-wrapper">
-    <!-- Botones de navegación en la parte superior -->
     <div class="navigation-arrows">
       <button
         @click="navegarA(obraActiva - 1)"
@@ -30,7 +29,6 @@
       @mousemove="arrastrar"
     >
       <div class="galeria" ref="galeria">
-        <!-- renderiza las obras que tienen imagen -->
         <div
           v-for="(obra, index) in obrasConImagen"
           :key="obra.id"
@@ -67,14 +65,12 @@
               </svg>
             </button>
           </div>
-          <!-- Información debajo de la imagen -->
           <div class="informacion">
             <p class="autor">{{ obra.artist_title || 'Autor desconocido' }}</p>
             <p class="año">{{ obra.date_display || 'Fecha desconocida' }}</p>
           </div>
         </div>
       </div>
-      <!-- Mensaje simple de error de timeout -->
       <div v-if="timeoutError" class="timeout-error">
         <p>Tiempo de espera excedido</p>
         <button @click="reintentar" class="retry-button">Reintentar</button>
@@ -88,8 +84,8 @@ import { useObraLikesStore } from '../stores/obraLikes.js'
 export default {
   data() {
     return {
-      obras: [],
-      obrasConImagen: [],
+      obras: [], // Todas las obras
+      obrasConImagen: [], // Solo obras con imagen disponible
       pagina: 1,
       cargando: false,
       arrastrando: false,
@@ -103,9 +99,9 @@ export default {
       finCargado: false,
       timeoutError: false,
       timeoutId: null,
-      imagenesEnCarga: {}, // Objeto para rastrear las imágenes que están cargando
-      imagenesCargadas: {}, // Objeto para rastrear las imágenes ya cargadas
-      margenDeCarga: 2, // Número de imágenes a cargar antes y después de la actual
+      imagenesEnCarga: {}, // Control de lazy loading
+      imagenesCargadas: {},
+      margenDeCarga: 2, // Imágenes a precargar antes/después de la actual
     }
   },
   computed: {
@@ -131,32 +127,36 @@ export default {
       if (this.cargando || this.finCargado) return
       this.cargando = true
       this.timeoutError = false
-      // Configurar timeout
+
+      // Timeout de seguridad por si la API tarda demasiado
       this.timeoutId = setTimeout(() => {
         this.timeoutError = true
         this.cargando = false
-      }, 10000) // 10 segundos de timeout
+      }, 10000)
+
       try {
         const response = await axios.get(
           `https://api.artic.edu/api/v1/artworks?page=${this.pagina}&limit=10`,
         )
-        // Limpiar el timeout si la petición fue exitosa
         clearTimeout(this.timeoutId)
         const nuevasObras = response.data.data
+
         if (nuevasObras.length === 0) {
           this.finCargado = true
         } else {
-          // Filtrar las nuevas obras que tienen imagen
+          // Filtramos solo las que tienen imagen
           const nuevasObrasConImagen = nuevasObras.filter((obra) => obra.image_id)
-          // Agregar solo las obras con imagen
+
           this.obrasConImagen = [...this.obrasConImagen, ...nuevasObrasConImagen]
           this.obras = [...this.obras, ...nuevasObras]
           this.pagina++
-          // Verificar si hay suficientes obras con imagen
+
+          // Si no tenemos suficientes obras, seguimos cargando
           if (this.obrasConImagen.length < 10 && !this.finCargado) {
             this.obtenerObras()
           }
         }
+
         this.$nextTick(() => {
           this.calcularDimensiones()
           this.verificarImagenesParaCargar()
@@ -165,6 +165,7 @@ export default {
         clearTimeout(this.timeoutId)
         console.error('Error al obtener obras', error)
         this.timeoutError = true
+
         if (error.response && error.response.status === 404) {
           this.finCargado = true
         }
@@ -172,25 +173,29 @@ export default {
         this.cargando = false
       }
     },
+
     reintentar() {
       this.timeoutError = false
       this.obtenerObras()
     },
+
     getImageUrl(imageId) {
       return imageId ? `https://www.artic.edu/iiif/2/${imageId}/full/843,/0/default.jpg` : ''
     },
+
     agregarScrollListener() {
       const contenedor = this.$refs.contenedor
       contenedor.addEventListener('scroll', () => {
-        // Verificar si estamos cerca del final y cargar más elementos
+        // Detecta cuando estamos cerca del final para cargar más
         const isNearEnd =
           contenedor.scrollLeft + contenedor.clientWidth >= contenedor.scrollWidth - 200
         if (isNearEnd && !this.cargando && !this.finCargado && !this.timeoutError) {
           this.obtenerObras()
         }
-        // Actualizar el elemento activo basado en scroll
+
         this.actualizarElementoActivo()
-        // Configurar snap al finalizar el scroll
+
+        // Configuramos snap al centro con debounce
         if (this.snapTimeout) {
           clearTimeout(this.snapTimeout)
         }
@@ -200,25 +205,26 @@ export default {
           this.snapAlCentro()
         }, 150)
 
-        // Verificar qué imágenes deberían cargarse ahora
         this.verificarImagenesParaCargar()
       })
     },
-    // Método para determinar si una imagen debe cargarse basado en la posición
+
+    // Sistema de carga perezosa para las imágenes
     debeCargarImagen(index) {
-      // Si ya se cargó la imagen, mostrarla siempre
+      // Si ya la cargamos, la mostramos
       if (this.imagenesCargadas[index]) {
         return true
       }
 
-      // Cargar imágenes dentro del rango de margen de la imagen activa
+      // Solo cargamos las cercanas a la vista actual
       return (
         index >= this.obraActiva - this.margenDeCarga &&
         index <= this.obraActiva + this.margenDeCarga
       )
     },
-    // Método para verificar qué imágenes deben cargarse
+
     verificarImagenesParaCargar() {
+      // Marcamos para cargar las imágenes que están en el margen de visibilidad
       for (
         let i = this.obraActiva - this.margenDeCarga;
         i <= this.obraActiva + this.margenDeCarga;
@@ -226,69 +232,81 @@ export default {
       ) {
         if (i >= 0 && i < this.obrasConImagen.length) {
           if (!this.imagenesCargadas[i] && !this.imagenesEnCarga[i]) {
-            this.imagenesEnCarga[i] = true // En Vue 3 ya no necesitas this.$set()
+            this.imagenesEnCarga[i] = true
           }
         }
       }
     },
-    // Método para marcar una imagen como cargada
+
     imagenCargada(index) {
       this.imagenesEnCarga[index] = false
       this.imagenesCargadas[index] = true
     },
+
     calcularDimensiones() {
       if (!this.$refs.obraElements || !this.$refs.obraElements.length) return
+
       this.carouselItems = this.$refs.obraElements
       const containerWidth = this.$refs.contenedor.clientWidth
       this.itemWidth = this.carouselItems[0].offsetWidth
-      // Añadir margen a los elementos para asegurar espaciado adecuado
+
+      // Calculamos márgenes para centrar las obras
       const marginHorizontal = (containerWidth - this.itemWidth) / 2
       this.$refs.galeria.style.paddingLeft = `${marginHorizontal}px`
       this.$refs.galeria.style.paddingRight = `${marginHorizontal}px`
-      // Centrar el primer elemento si estamos al inicio
+
+      // Centramos la primera obra al inicio
       if (this.$refs.contenedor.scrollLeft === 0 && this.obraActiva === 0) {
         this.centrarElemento(0)
-        // Iniciar carga de imágenes iniciales
         this.verificarImagenesParaCargar()
       }
     },
+
+    // Determina qué obra es la más cercana al centro visual
     actualizarElementoActivo() {
       if (!this.carouselItems.length) return
+
       const containerCenter =
         this.$refs.contenedor.scrollLeft + this.$refs.contenedor.clientWidth / 2
+
       let closestIndex = 0
       let closestDistance = Infinity
+
       this.carouselItems.forEach((item, index) => {
         const itemCenter = item.offsetLeft + item.offsetWidth / 2
         const distance = Math.abs(containerCenter - itemCenter)
+
         if (distance < closestDistance) {
           closestDistance = distance
           closestIndex = index
         }
       })
-      // Solo actualizar si el índice ha cambiado
+
       if (this.obraActiva !== closestIndex) {
         this.obraActiva = closestIndex
-        // Verificar imágenes para cargar cuando cambia la obra activa
         this.verificarImagenesParaCargar()
       }
     },
+
     centrarElemento(index) {
       if (!this.carouselItems.length || index >= this.carouselItems.length) return
+
       const item = this.carouselItems[index]
       const container = this.$refs.contenedor
       const itemCenter = item.offsetLeft + item.offsetWidth / 2
       const containerCenter = container.clientWidth / 2
-      // Usar scrollTo con behavior: 'smooth' para una transición suave
+
       container.scrollTo({
         left: itemCenter - containerCenter,
         behavior: 'smooth',
       })
     },
+
     snapAlCentro() {
       if (this.scrolling) return
       this.centrarElemento(this.obraActiva)
     },
+
     empezarArrastre(event) {
       this.arrastrando = true
       this.inicioX = event.pageX - this.$refs.contenedor.offsetLeft
@@ -296,34 +314,39 @@ export default {
       this.$refs.contenedor.style.cursor = 'grabbing'
       event.preventDefault()
     },
+
     terminarArrastre() {
       this.arrastrando = false
       this.$refs.contenedor.style.cursor = 'grab'
       this.snapAlCentro()
     },
+
     arrastrar(event) {
       if (!this.arrastrando) return
       event.preventDefault()
+
       const x = event.pageX - this.$refs.contenedor.offsetLeft
-      const desplazamiento = (x - this.inicioX) * 2
+      const desplazamiento = (x - this.inicioX) * 2 // Multiplicador para ajustar sensibilidad
       this.$refs.contenedor.scrollLeft = this.scrollIzq - desplazamiento
     },
+
     toggleLike(obra) {
       this.likesStore.toggleLike(obra)
     },
-    // Método para navegar a la obra con el índice dado
+
     navegarA(index) {
       if (index < 0 || index >= this.obrasConImagen.length) return
+
       this.obraActiva = index
       this.centrarElemento(index)
-      // Verificar imágenes para cargar al navegar
       this.verificarImagenesParaCargar()
-      // Si estamos cerca del final, cargar más obras
+
+      // Carga anticipada si nos acercamos al final
       if (index >= this.obrasConImagen.length - 3 && !this.cargando && !this.finCargado) {
         this.obtenerObras()
       }
     },
-    // Manejo de navegación con teclado (flechas izquierda/derecha)
+
     manejarTeclas(event) {
       if (event.key === 'ArrowLeft') {
         this.navegarA(this.obraActiva - 1)
@@ -335,12 +358,10 @@ export default {
 }
 </script>
 <style scoped>
-/* Contenedor principal que envuelve todo el carrusel */
 .carousel-wrapper {
   position: relative;
   width: 100%;
 }
-/* Estilos para las flechas de navegación en la parte superior */
 .navigation-arrows {
   display: flex;
   justify-content: start;
@@ -424,7 +445,6 @@ export default {
   margin: 0;
   font-size: 14px;
 }
-/* Estilo de contenedor de la imagen */
 .imagen-container {
   width: 100%;
   height: 70%;
@@ -448,14 +468,12 @@ img {
   user-select: none;
   transition: all 0.3s ease;
 }
-/* Placeholder para imágenes no cargadas aún */
 .imagen-placeholder {
   width: 100%;
   height: 100%;
   background-color: #e6e6e6;
   border-radius: 5px;
 }
-/* Estilos para el indicador de carga */
 .loading-overlay {
   position: absolute;
   top: 0;
@@ -482,7 +500,6 @@ img {
     transform: rotate(360deg);
   }
 }
-/* Estilos del mensaje de error de timeout */
 .timeout-error {
   position: fixed;
   top: 40%;
@@ -511,7 +528,6 @@ img {
   border-radius: 3px;
   cursor: pointer;
 }
-/* Estilos para el botón de like */
 .like-button {
   position: absolute;
   top: 10px;
