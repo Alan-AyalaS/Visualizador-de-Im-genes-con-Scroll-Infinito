@@ -1,15 +1,17 @@
 <template>
   <header>
-    <a href="/"
-      ><img
-        src="../assets/imgs/Art_Institute_of_Chicago_Logo.png"
-        alt="Art_Institute_of_Chicago_Logo"
-    /></a>
-    <nav>
-      <RouterLink class="enlace" to="/">Home</RouterLink>
-      <RouterLink class="enlace" to="/favourite">Favoritas</RouterLink>
-      <!-- <RouterLink to="/about">About</RouterLink> -->
-    </nav>
+    <div class="nav-container">
+      <a href="/"
+        ><img
+          src="../assets/imgs/Art_Institute_of_Chicago_Logo.png"
+          alt="Art_Institute_of_Chicago_Logo"
+      /></a>
+      <nav>
+        <RouterLink class="enlace" to="/">Home</RouterLink>
+        <RouterLink class="enlace" to="/favourite">Favoritas</RouterLink>
+        <!-- <RouterLink to="/about">About</RouterLink> -->
+      </nav>
+    </div>
   </header>
 </template>
 
@@ -18,11 +20,24 @@
 <style>
 header {
   display: flex;
-  justify-content: center;
   align-items: end;
-  padding: 10px 20px;
   background-color: rgba(255, 255, 255, 0.144);
   color: #2f2f2f;
+}
+
+header .nav-container {
+  display: flex;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  align-items: end;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 700px) {
+  header .nav-container {
+    padding: 0 20px;
+  }
 }
 
 header img {
@@ -30,16 +45,10 @@ header img {
   width: 70px;
 }
 
-@media(min-width:768px){
-  header {
-  padding: 10px 100px;
-  }
+@media (min-width: 768px) {
 }
 
-@media (min-width: 1440px){
-  header {
-  padding: 10px 150px;
-  }
+@media (min-width: 1440px) {
 }
 
 img a {
