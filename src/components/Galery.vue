@@ -21,7 +21,6 @@
         </svg>
       </button>
     </div>
-
     <div
       class="carousel-container"
       ref="contenedor"
@@ -40,8 +39,16 @@
           ref="obraElements"
         >
           <div class="imagen-container">
-            <img :src="getImageUrl(obra.image_id)" alt="Obra de arte" />
-            <div v-if="cargando && index === obraActiva" class="loading-overlay">
+            <img 
+              v-if="debeCargarImagen(index)"
+              :src="getImageUrl(obra.image_id)" 
+              :data-src="getImageUrl(obra.image_id)"
+              alt="Obra de arte" 
+              loading="lazy"
+              @load="imagenCargada(index)"
+            />
+            <div v-else class="imagen-placeholder"></div>
+            <div v-if="imagenesEnCarga[index] || (cargando && index === obraActiva)" class="loading-overlay">
               <div class="spinner"></div>
             </div>
             <button
@@ -64,7 +71,6 @@
           </div>
         </div>
       </div>
-
       <!-- Mensaje simple de error de timeout -->
       <div v-if="timeoutError" class="timeout-error">
         <p>Tiempo de espera excedido</p>
@@ -73,11 +79,9 @@
     </div>
   </div>
 </template>
-
 <script>
 import axios from 'axios'
 import { useObraLikesStore } from '../stores/obraLikes.js'
-
 export default {
   data() {
     return {
@@ -96,6 +100,9 @@ export default {
       finCargado: false,
       timeoutError: false,
       timeoutId: null,
+      imagenesEnCarga: {},  // Objeto para rastrear las imágenes que están cargando
+      imagenesCargadas: {}, // Objeto para rastrear las imágenes ya cargadas
+      margenDeCarga: 2      // Número de imágenes a cargar antes y después de la actual
     }
   },
   computed: {
@@ -121,48 +128,40 @@ export default {
       if (this.cargando || this.finCargado) return
       this.cargando = true
       this.timeoutError = false
-
       // Configurar timeout
       this.timeoutId = setTimeout(() => {
         this.timeoutError = true
         this.cargando = false
       }, 10000) // 10 segundos de timeout
-
       try {
         const response = await axios.get(
           `https://api.artic.edu/api/v1/artworks?page=${this.pagina}&limit=10`,
         )
-
         // Limpiar el timeout si la petición fue exitosa
         clearTimeout(this.timeoutId)
-
         const nuevasObras = response.data.data
-
         if (nuevasObras.length === 0) {
           this.finCargado = true
         } else {
           // Filtrar las nuevas obras que tienen imagen
           const nuevasObrasConImagen = nuevasObras.filter((obra) => obra.image_id)
-
           // Agregar solo las obras con imagen
           this.obrasConImagen = [...this.obrasConImagen, ...nuevasObrasConImagen]
           this.obras = [...this.obras, ...nuevasObras]
           this.pagina++
-
           // Verificar si hay suficientes obras con imagen
           if (this.obrasConImagen.length < 10 && !this.finCargado) {
             this.obtenerObras()
           }
         }
-
         this.$nextTick(() => {
           this.calcularDimensiones()
+          this.verificarImagenesParaCargar()
         })
       } catch (error) {
         clearTimeout(this.timeoutId)
         console.error('Error al obtener obras', error)
         this.timeoutError = true
-
         if (error.response && error.response.status === 404) {
           this.finCargado = true
         }
@@ -183,14 +182,11 @@ export default {
         // Verificar si estamos cerca del final y cargar más elementos
         const isNearEnd =
           contenedor.scrollLeft + contenedor.clientWidth >= contenedor.scrollWidth - 200
-
         if (isNearEnd && !this.cargando && !this.finCargado && !this.timeoutError) {
           this.obtenerObras()
         }
-
         // Actualizar el elemento activo basado en scroll
         this.actualizarElementoActivo()
-
         // Configurar snap al finalizar el scroll
         if (this.snapTimeout) {
           clearTimeout(this.snapTimeout)
@@ -200,56 +196,82 @@ export default {
           this.scrolling = false
           this.snapAlCentro()
         }, 150)
+        
+        // Verificar qué imágenes deberían cargarse ahora
+        this.verificarImagenesParaCargar()
       })
+    },
+    // Método para determinar si una imagen debe cargarse basado en la posición
+    debeCargarImagen(index) {
+      // Si ya se cargó la imagen, mostrarla siempre
+      if (this.imagenesCargadas[index]) {
+        return true
+      }
+      
+      // Cargar imágenes dentro del rango de margen de la imagen activa
+      return index >= this.obraActiva - this.margenDeCarga && 
+             index <= this.obraActiva + this.margenDeCarga
+    },
+    // Método para verificar qué imágenes deben cargarse
+    verificarImagenesParaCargar() {
+      // Para cada obra en el rango del margen de carga
+      for (let i = this.obraActiva - this.margenDeCarga; i <= this.obraActiva + this.margenDeCarga; i++) {
+        if (i >= 0 && i < this.obrasConImagen.length) {
+          // Si aún no se ha iniciado la carga, marcarla como en carga
+          if (!this.imagenesCargadas[i] && !this.imagenesEnCarga[i]) {
+            this.$set(this.imagenesEnCarga, i, true)
+          }
+        }
+      }
+    },
+    // Método para marcar una imagen como cargada
+    imagenCargada(index) {
+      this.$set(this.imagenesEnCarga, index, false)
+      this.$set(this.imagenesCargadas, index, true)
     },
     calcularDimensiones() {
       if (!this.$refs.obraElements || !this.$refs.obraElements.length) return
-
       this.carouselItems = this.$refs.obraElements
       const containerWidth = this.$refs.contenedor.clientWidth
       this.itemWidth = this.carouselItems[0].offsetWidth
-
       // Añadir margen a los elementos para asegurar espaciado adecuado
       const marginHorizontal = (containerWidth - this.itemWidth) / 2
       this.$refs.galeria.style.paddingLeft = `${marginHorizontal}px`
       this.$refs.galeria.style.paddingRight = `${marginHorizontal}px`
-
       // Centrar el primer elemento si estamos al inicio
       if (this.$refs.contenedor.scrollLeft === 0 && this.obraActiva === 0) {
         this.centrarElemento(0)
+        // Iniciar carga de imágenes iniciales
+        this.verificarImagenesParaCargar()
       }
     },
     actualizarElementoActivo() {
       if (!this.carouselItems.length) return
-
       const containerCenter =
         this.$refs.contenedor.scrollLeft + this.$refs.contenedor.clientWidth / 2
       let closestIndex = 0
       let closestDistance = Infinity
-
       this.carouselItems.forEach((item, index) => {
         const itemCenter = item.offsetLeft + item.offsetWidth / 2
         const distance = Math.abs(containerCenter - itemCenter)
-
         if (distance < closestDistance) {
           closestDistance = distance
           closestIndex = index
         }
       })
-
       // Solo actualizar si el índice ha cambiado
       if (this.obraActiva !== closestIndex) {
         this.obraActiva = closestIndex
+        // Verificar imágenes para cargar cuando cambia la obra activa
+        this.verificarImagenesParaCargar()
       }
     },
     centrarElemento(index) {
       if (!this.carouselItems.length || index >= this.carouselItems.length) return
-
       const item = this.carouselItems[index]
       const container = this.$refs.contenedor
       const itemCenter = item.offsetLeft + item.offsetWidth / 2
       const containerCenter = container.clientWidth / 2
-
       // Usar scrollTo con behavior: 'smooth' para una transición suave
       container.scrollTo({
         left: itemCenter - containerCenter,
@@ -287,7 +309,8 @@ export default {
       if (index < 0 || index >= this.obrasConImagen.length) return
       this.obraActiva = index
       this.centrarElemento(index)
-
+      // Verificar imágenes para cargar al navegar
+      this.verificarImagenesParaCargar()
       // Si estamos cerca del final, cargar más obras
       if (index >= this.obrasConImagen.length - 3 && !this.cargando && !this.finCargado) {
         this.obtenerObras()
@@ -304,14 +327,12 @@ export default {
   },
 }
 </script>
-
 <style scoped>
 /* Contenedor principal que envuelve todo el carrusel */
 .carousel-wrapper {
   position: relative;
   width: 100%;
 }
-
 /* Estilos para las flechas de navegación en la parte superior */
 .navigation-arrows {
   display: flex;
@@ -319,14 +340,12 @@ export default {
   align-items: center;
   gap: 20px;
 }
-
 @media (min-width: 500px) {
   .navigation-arrows {
     justify-content: end;
     margin-right: 80px;
   }
 }
-
 .arrow-btn {
   width: 40px;
   height: 40px;
@@ -339,13 +358,11 @@ export default {
   cursor: pointer;
   transition: all 0.2s ease;
 }
-
 .arrow-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
   transform: none;
 }
-
 .carousel-container {
   width: 100%;
   overflow-x: auto;
@@ -358,16 +375,13 @@ export default {
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
 }
-
 .carousel-container::-webkit-scrollbar {
   display: none;
 }
-
 .galeria {
   display: flex;
   gap: 30px;
 }
-
 .obra {
   flex: 0 0 auto;
   width: 250px;
@@ -379,14 +393,12 @@ export default {
   filter: blur(1px);
   scroll-snap-align: center;
 }
-
 .obra-activa {
   transform: scale(1.1);
   opacity: 1;
   filter: blur(0);
   z-index: 10;
 }
-
 .informacion {
   position: relative;
   background-color: rgba(0, 0, 0, 0.5);
@@ -397,17 +409,14 @@ export default {
   margin-top: 10px;
   transition: all 0.3s ease;
 }
-
 .obra-activa .informacion {
   background-color: rgba(0, 0, 0, 0.877);
 }
-
 .autor,
 .año {
   margin: 0;
   font-size: 14px;
 }
-
 /* Estilo de contenedor de la imagen */
 .imagen-container {
   width: 100%;
@@ -421,11 +430,9 @@ export default {
   transition: all 0.3s ease;
   position: relative;
 }
-
 .obra-activa .imagen-container {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
-
 img {
   max-width: 100%;
   max-height: 100%;
@@ -434,7 +441,13 @@ img {
   user-select: none;
   transition: all 0.3s ease;
 }
-
+/* Placeholder para imágenes no cargadas aún */
+.imagen-placeholder {
+  width: 100%;
+  height: 100%;
+  background-color: #e6e6e6;
+  border-radius: 5px;
+}
 /* Estilos para el indicador de carga */
 .loading-overlay {
   position: absolute;
@@ -449,7 +462,6 @@ img {
   z-index: 20;
   border-radius: 5px;
 }
-
 .spinner {
   width: 40px;
   height: 40px;
@@ -458,13 +470,11 @@ img {
   border-top-color: #ffffff;
   animation: spin 1s ease-in-out infinite;
 }
-
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
-
 /* Estilos del mensaje de error de timeout */
 .timeout-error {
   position: fixed;
@@ -479,12 +489,10 @@ img {
   text-align: center;
   box-shadow: 0 1px 20cqb rgba(0, 0, 0, 0.349);
 }
-
 .timeout-error p {
   font-size: 1.8rem;
   font-weight: 600;
 }
-
 .retry-button {
   margin: 5px 0px;
   margin-left: 10px;
@@ -496,7 +504,6 @@ img {
   border-radius: 3px;
   cursor: pointer;
 }
-
 /* Estilos para el botón de like */
 .like-button {
   position: absolute;
@@ -515,16 +522,13 @@ img {
   transition: all 0.2s ease;
   color: #888;
 }
-
 .like-button:hover {
   background-color: rgba(255, 255, 255, 0.9);
 }
-
 .like-button.liked {
   color: #ff3b5c;
   background-color: rgba(255, 255, 255, 0.9);
 }
-
 .obra-activa .like-button {
   opacity: 1;
 }
