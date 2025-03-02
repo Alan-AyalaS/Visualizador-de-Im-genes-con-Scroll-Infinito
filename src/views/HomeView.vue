@@ -28,7 +28,7 @@ import Galery from '@/components/Galery.vue'
 }
 
 h1 {
-  font-size: 2.8rem;
+  font-size: 1.8rem;
   letter-spacing: 1px;
 
   color: #fff;

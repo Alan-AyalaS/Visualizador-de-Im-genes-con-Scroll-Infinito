@@ -22,6 +22,7 @@ header {
   align-items: end;
   padding: 10px 20px;
   background-color: rgba(255, 255, 255, 0.144);
+  color: #2f2f2f;
 }
 
 header img {

@@ -3,55 +3,74 @@ import { defineStore } from 'pinia'
 
 export const useObraLikesStore = defineStore('obraLikes', {
   state: () => ({
-    likedObras: [],
+    // Guardamos las obras completas para no tener que hacer solicitudes adicionales
+    likedObras: {},
   }),
 
   actions: {
     toggleLike(obra) {
-      const index = this.likedObras.findIndex((item) => item.id === obra.id)
+      if (!obra || !obra.id) return
 
-      if (index === -1) {
-        // Añadir a favoritos
-        this.likedObras.push({
-          id: obra.id,
-          image_id: obra.image_id,
-          artist_title: obra.artist_title,
-          date_display: obra.date_display,
-          title: obra.title,
-        })
+      if (this.isLiked(obra.id)) {
+        // Eliminar el like
+        const { [obra.id]: removed, ...rest } = this.likedObras
+        this.likedObras = rest
       } else {
-        // Quitar de favoritos
-        this.likedObras.splice(index, 1)
+        // Agregar el like guardando toda la información de la obra
+        this.likedObras = {
+          ...this.likedObras,
+          [obra.id]: obra,
+        }
       }
 
-      // Guardar en localStorage
-      this.saveToLocalStorage()
+      // Persistir en localStorage
+      this.guardarEnLocalStorage()
     },
 
-    isLiked(obraId) {
-      return this.likedObras.some((obra) => obra.id === obraId)
+    isLiked(id) {
+      return !!this.likedObras[id]
     },
 
-    saveToLocalStorage() {
-      localStorage.setItem('likedObras', JSON.stringify(this.likedObras))
+    getLikedIds() {
+      return Object.keys(this.likedObras)
     },
 
-    loadFromLocalStorage() {
-      const saved = localStorage.getItem('likedObras')
-      if (saved) {
-        this.likedObras = JSON.parse(saved)
+    getLikedObra(id) {
+      return this.likedObras[id] || null
+    },
+
+    getLikedObras() {
+      return Object.values(this.likedObras)
+    },
+
+    cargarDeLocalStorage() {
+      try {
+        const storedLikes = localStorage.getItem('obraLikes')
+        if (storedLikes) {
+          this.likedObras = JSON.parse(storedLikes)
+        }
+      } catch (error) {
+        console.error('Error al cargar likes del localStorage:', error)
+        // En caso de error, mantener el estado vacío
+        this.likedObras = {}
       }
     },
-  },
 
-  getters: {
-    likedCount: (state) => state.likedObras.length,
+    guardarEnLocalStorage() {
+      try {
+        localStorage.setItem('obraLikes', JSON.stringify(this.likedObras))
+      } catch (error) {
+        console.error('Error al guardar likes en localStorage:', error)
+      }
+    },
   },
 })
 
-// Inicializar store - debe ser importado y llamado en el archivo principal de la app
+// Función que inicializa el store después de que Pinia esté disponible
 export function initializeObraLikes() {
   const store = useObraLikesStore()
-  store.loadFromLocalStorage()
+  store.cargarDeLocalStorage()
   return store
 }
+
+// No inicializamos automáticamente aquí, lo haremos desde main.js

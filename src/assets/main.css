@@ -14,9 +14,10 @@ html {
 a {
   font-family: 'Quicksand', sans-serif;
   text-decoration: none;
-  color: rgb(0, 0, 0);
+  color: #2f2f2f;
   transition: 0.4s;
   padding: 3px;
+  font-weight: 500;
 }
 
 main {
