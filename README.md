@@ -1,35 +1,89 @@
-# pt-visualizador-imagenes
+# Visualizador de Imágenes con Scroll Infinito
 
-This template should help get you started developing with Vue 3 in Vite.
+
+Un proyecto de visualización de imágenes con scroll infinito, implementado con Vue.js y desplegado en Netlify.
 
 ## Recommended IDE Setup
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## 🚀 Características
 
-## Customize configuration
+- Carga dinámica de imágenes con scroll infinito.
+- Uso de lazy loading para mejorar el rendimiento.
+- Sistema de favoritos con persistencia local.
+- Interfaz optimizada para una mejor experiencia de usuario.
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+## 🛠️ Tecnologías
 
-## Project Setup
+- Vue.js 3
+- Vue Router
+- Netlify para el despliegue
+- Git y GitHub para control de versiones
+
+## 📦 Instalación y Uso
+
+### 🔧 Requisitos
+
+Antes de comenzar, asegúrate de tener instalado:
+
+- Node.js (versión recomendada: 16+)
+- Git
+
+### ⬇️ Clonar el repositorio
+
+```sh
+git clone https://github.com/tu-usuario/visualizador-imagenes.git
+cd visualizador-imagenes
+```
+
+## 📦 Instalar dependencias
 
 ```sh
 npm install
 ```
 
-### Compile and Hot-Reload for Development
+## ▶️ Ejecutar en desarrollo
 
 ```sh
 npm run dev
 ```
 
-### Compile and Minify for Production
+Abre http://localhost:5173 en tu navegador para ver la app en acción.
+
+## 🚀 Desplegar en Netlify
+
+Si ya tienes Netlify configurado, puedes hacer un nuevo deploy con:
+
+```sh
+npm run build
+netlify deploy
+```
+
+### 📂 Estructura del Proyecto
+
+```sh
+📦 visualizador-imagenes
+ ┣ 📂 src
+ ┃ ┣ 📂 components
+ ┃ ┃ ┣ 📜 ImageCard.vue
+ ┃ ┃ ┣ 📜 Favorites.vue
+ ┃ ┣ 📂 views
+ ┃ ┃ ┣ 📜 Home.vue
+ ┃ ┃ ┣ 📜 Favorites.vue
+ ┃ ┣ 📜 App.vue
+ ┃ ┣ 📜 main.js
+ ┣ 📂 public
+ ┣ 📜 package.json
+ ┣ 📜 README.md
+```
+
+### Estru
 
 ```sh
 npm run build
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+### 📄 Licencia
 
-```sh
-npm run lint
-```
+Este proyecto está bajo la licencia MIT.
+
+
