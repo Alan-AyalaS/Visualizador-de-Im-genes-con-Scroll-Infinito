@@ -320,6 +320,13 @@ export default {
   gap: 20px;
 }
 
+@media (min-width: 500px) {
+  .navigation-arrows {
+    justify-content: end;
+    margin-right: 80px;
+  }
+}
+
 .arrow-btn {
   width: 40px;
   height: 40px;
