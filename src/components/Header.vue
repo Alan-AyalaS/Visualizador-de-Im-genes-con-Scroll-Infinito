@@ -34,7 +34,7 @@ header .nav-container {
   margin-bottom: 10px;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 1208px) {
   header .nav-container {
     padding: 0 20px;
   }
